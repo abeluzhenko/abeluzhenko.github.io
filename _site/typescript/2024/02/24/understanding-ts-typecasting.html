@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/assets/css/style.css?v=ec4155f62be970e87c34618de7ea7a326cf5bc5d">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
+
+<!-- Setup theme-color -->
+<!-- start theme color meta headers -->
+<meta name="theme-color" content="#151515">
+<meta name="msapplication-navbutton-color" content="#151515">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- end theme color meta headers -->
+
+
+<!-- Setup Google Analytics -->
+
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Understanding TypeScript typecasting | My super-duper dev blog</title>
+<meta name="generator" content="Jekyll v3.9.5" />
+<meta property="og:title" content="Understanding TypeScript typecasting" />
+<meta name="author" content="Anton Beluzhenko" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Disclaimer: typecasts lead to losing type information, I’d strongly recommend avoiding them, whenever possible. There are cases when typecasting is necessary or even preferable." />
+<meta property="og:description" content="Disclaimer: typecasts lead to losing type information, I’d strongly recommend avoiding them, whenever possible. There are cases when typecasting is necessary or even preferable." />
+<link rel="canonical" href="http://localhost:4000/typescript/2024/02/24/understanding-ts-typecasting.html" />
+<meta property="og:url" content="http://localhost:4000/typescript/2024/02/24/understanding-ts-typecasting.html" />
+<meta property="og:site_name" content="My super-duper dev blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-02-24T13:52:32+04:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Understanding TypeScript typecasting" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Anton Beluzhenko"},"dateModified":"2024-02-24T13:52:32+04:00","datePublished":"2024-02-24T13:52:32+04:00","description":"Disclaimer: typecasts lead to losing type information, I’d strongly recommend avoiding them, whenever possible. There are cases when typecasting is necessary or even preferable.","headline":"Understanding TypeScript typecasting","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/typescript/2024/02/24/understanding-ts-typecasting.html"},"url":"http://localhost:4000/typescript/2024/02/24/understanding-ts-typecasting.html"}</script>
+<!-- End Jekyll SEO tag -->
+
+  </head>
+
+  <body>
+
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>My super-duper dev blog</h1>
+        </a>
+        <h2>Nobody reads descriptions and I don't care about SEO.</h2>
+
+        <section id="downloads">
+          
+          <a href="https://github.com/abeluzhenko/abeluzhenko.github.io" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
+
+    <div class="container">
+      <section id="main_content">
+        <small>24 February 2024</small>
+<h1>Understanding TypeScript typecasting</h1>
+
+<p class="view">by Anton Beluzhenko</p>
+
+<blockquote>
+  <p>Disclaimer: typecasts lead to losing type information, I’d strongly recommend avoiding them, whenever possible.</p>
+</blockquote>
+
+<p>There are cases when typecasting is necessary or even preferable.</p>
+
+<!--more-->
+
+<p>For example, that could be casting mocks in tests. Let’s take a function that accepts an HTML element and sets up some attributes:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">setElementAttributes</span><span class="p">(</span><span class="nx">element</span><span class="p">:</span> <span class="nx">HTMLElement</span><span class="p">):</span> <span class="k">void</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>Assuming, we want to cover it with some unit tests. And, for some reason, we need to validate its behavior to be sure that appropriate methods were called with expected arguments. It seems rational to mock an argument of the function in a test case, instead of passing a real HTML element:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">element</span> <span class="o">=</span> <span class="p">{</span> <span class="na">setAttributes</span><span class="p">:</span> <span class="nx">jest</span><span class="p">.</span><span class="nx">fn</span><span class="p">()</span> <span class="p">}</span> <span class="k">as</span> <span class="nx">HTMLElement</span><span class="p">;</span>
+
+<span class="nx">setElementAttributes</span><span class="p">(</span><span class="nx">element</span><span class="p">);</span>
+
+<span class="nx">expect</span><span class="p">(</span><span class="nx">element</span><span class="p">.</span><span class="nx">setAttributes</span><span class="p">).</span><span class="nx">toHaveBeenCalled</span><span class="p">();</span>
+</code></pre></div></div>
+
+<p>The mock contains just enough for this test case, but the code above generates the following TypeScript error:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Conversion of type '{ setAttribute: jest.Mock&lt;any, any, any&gt;; }'
+to type 'HTMLElement'may be a mistake because neither type
+sufficiently overlaps with the other.
+If this was intentional, convert the expression to 'unknown' first.
+
+Type '{ setAttribute: Mock&lt;any, any, any&gt;; }' is missing the following
+properties from type 'HTMLElement': accessKey, accessKeyLabel, autocapitalize,
+dir, and 289 more.
+</code></pre></div></div>
+
+<blockquote>
+  <p>The typecasting mechanism has sitting belts: TS doesn’t allow typecasting for non-overlapping types.</p>
+</blockquote>
+
+<p>It may be very appealing just to follow the suggestion above and add <code class="language-plaintext highlighter-rouge">as unknown</code> before casting the mock to the expected type:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">element</span> <span class="o">=</span> <span class="p">{</span> <span class="na">setAttributes</span><span class="p">:</span> <span class="nx">jest</span><span class="p">.</span><span class="nx">fn</span><span class="p">()</span> <span class="p">}</span> <span class="k">as</span> <span class="nx">unknown</span> <span class="k">as</span> <span class="nx">HTMLElement</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>But this will disable any type checks for the object and it will be much harder to reflect future changes of the interface inside the test.</p>
+
+<p>So, where does this TS error come from, and how do we deal with it? Isn’t that we, who are the masters of our code? How dare this TypeScript to object us?</p>
+
+<p>To understand what is happening, let’s decompose how type-casting works in TypeScript.</p>
+
+<p>Here are types <code class="language-plaintext highlighter-rouge">TypeA</code> and <code class="language-plaintext highlighter-rouge">TypeB</code>:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">type</span> <span class="nx">TypeA</span> <span class="p">{</span>
+    <span class="nl">a</span><span class="p">:</span> <span class="dl">'</span><span class="s1">a</span><span class="dl">'</span>
+<span class="p">}</span>
+
+<span class="kd">type</span> <span class="nx">TypeB</span> <span class="p">{</span>
+    <span class="nl">b</span><span class="p">:</span> <span class="dl">'</span><span class="s1">b</span><span class="dl">'</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Let’s try to cast them to each other:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">a</span><span class="p">:</span> <span class="nx">TypeA</span> <span class="o">=</span> <span class="p">{</span> <span class="na">a</span><span class="p">:</span> <span class="dl">"</span><span class="s2">a</span><span class="dl">"</span> <span class="p">};</span>
+<span class="kd">const</span> <span class="nx">b</span><span class="p">:</span> <span class="nx">TypeB</span> <span class="o">=</span> <span class="p">{</span> <span class="na">b</span><span class="p">:</span> <span class="dl">"</span><span class="s2">b</span><span class="dl">"</span> <span class="p">};</span>
+
+<span class="kd">const</span> <span class="nx">bToA</span> <span class="o">=</span> <span class="nx">b</span> <span class="k">as</span> <span class="nx">TypeA</span><span class="p">;</span> <span class="c1">// Error: types don't overlap</span>
+</code></pre></div></div>
+
+<p>We’re getting an error, saying the casting is invalid, since the types don’t overlap.</p>
+
+<p>On the other hand, the following casting is valid:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">empty</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">as</span> <span class="nx">TypeA</span><span class="p">;</span> <span class="c1">// This is fine</span>
+</code></pre></div></div>
+
+<p>But when we add some field to an empty object, there is a type error again:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">notEmpty</span> <span class="o">=</span> <span class="p">{</span> <span class="na">extraField</span><span class="p">:</span> <span class="kc">true</span> <span class="p">}</span> <span class="k">as</span> <span class="nx">TypeA</span><span class="p">;</span> <span class="c1">// Error: types don't overlap</span>
+</code></pre></div></div>
+
+<p>That may seem a bit weird. Why an empty object can be type-casted into <code class="language-plaintext highlighter-rouge">TypeA</code>, but an object with some extra field can’t?</p>
+
+<p>When we cast <code class="language-plaintext highlighter-rouge">TypeA to TypeB</code>, TS checks whether <code class="language-plaintext highlighter-rouge">TypeA</code> can be converted to <code class="language-plaintext highlighter-rouge">TypeB</code> <strong>or</strong> if <code class="language-plaintext highlighter-rouge">TypeB</code> can be converted to <code class="language-plaintext highlighter-rouge">TypeA</code>.</p>
+
+<blockquote>
+  <p>The conversion is impossible for types that <strong>are not overlapping</strong>. It means that <strong>no value can have both types simultaneously</strong>.</p>
+</blockquote>
+
+<p>In a case when both conversions are impossible, TS shows an error, that is related to the <strong>first</strong> conversion attempt, which could be really misleading:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Conversion of type '{ extraField: boolean; }' to type 'TypeA'
+may be a mistake because neither type sufficiently overlaps with the other.
+If this was intentional, convert the expression to 'unknown' first.
+
+Property 'a' is missing in type '{ extraField: boolean; }' but required
+in type 'TypeA'
+</code></pre></div></div>
+
+<blockquote>
+  <p>There is a <a href="https://github.com/microsoft/TypeScript/issues/47361">suggestion to change this error message</a>, with more details.</p>
+</blockquote>
+
+<p>Let’s return to our example again:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">empty</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">as</span> <span class="nx">TypeA</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>Firstly, TS tries to convert an empty object to <code class="language-plaintext highlighter-rouge">TypeA</code>. These types are not compatible since the empty object missing a required field <code class="language-plaintext highlighter-rouge">a</code> from <code class="language-plaintext highlighter-rouge">TypeA</code>. Next, it tries to convert <code class="language-plaintext highlighter-rouge">TypeA</code> to <code class="language-plaintext highlighter-rouge">{}</code>. This is a valid conversion since <code class="language-plaintext highlighter-rouge">TypeA</code> could be considered as an empty object with some extra fields.</p>
+
+<p>Now let’s add an extra field to our object:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">notEmpty</span> <span class="o">=</span> <span class="p">{</span> <span class="na">extraField</span><span class="p">:</span> <span class="kc">true</span> <span class="p">}</span> <span class="k">as</span> <span class="nx">TypeA</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>Again, TS tries to convert the object to <code class="language-plaintext highlighter-rouge">TypeA</code>. Since it is missing field <code class="language-plaintext highlighter-rouge">a</code> from <code class="language-plaintext highlighter-rouge">TypeA</code>, this conversion won’t work. The next step is the conversion of <code class="language-plaintext highlighter-rouge">TypeA</code> to <code class="language-plaintext highlighter-rouge">{extraField: true}</code> type. Since <code class="language-plaintext highlighter-rouge">TypeA</code> misses <code class="language-plaintext highlighter-rouge">extraField</code>, this conversion is also impossible, and TS says about it, but refers to the first conversion attempt:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Property 'a' is missing in type '{ extraField: boolean; }'
+but required in type 'TypeA'
+</code></pre></div></div>
+
+<p>Keeping that in mind helps to understand TS complaints and fix them without unsafe type-casts:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">el</span> <span class="o">=</span> <span class="p">{</span> <span class="na">setAttributes</span><span class="p">:</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{}</span> <span class="p">}</span> <span class="k">as</span> <span class="nx">HTMLElement</span><span class="p">;</span> <span class="c1">// Error</span>
+</code></pre></div></div>
+
+<p>The type of <code class="language-plaintext highlighter-rouge">setAttributes</code> is not assignable to an appropriate type of <code class="language-plaintext highlighter-rouge">HTMLElement</code>, since it lacks function parameters. An empty function can’t be type-casted into a parametrized one:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">el</span> <span class="o">=</span> <span class="p">{</span> <span class="na">setAttributes</span><span class="p">:</span> <span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">value</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{}</span> <span class="p">}</span> <span class="k">as</span> <span class="nx">HTMLElement</span><span class="p">;</span> <span class="c1">// Fine</span>
+</code></pre></div></div>
+
+<p>Just adding the parameters enables the casing and fixes the error. We don’t even need to add the parameter types since they will be inferred by TS.</p>
+
+<p>But what about Jest mocks? We have started with an example of casting a mock object:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">element</span> <span class="o">=</span> <span class="p">{</span> <span class="na">setAttributes</span><span class="p">:</span> <span class="nx">jest</span><span class="p">.</span><span class="nx">fn</span><span class="p">()</span> <span class="p">}</span> <span class="k">as</span> <span class="nx">HTMLElement</span><span class="p">;</span>
+
+<span class="nx">setElementAttributes</span><span class="p">(</span><span class="nx">element</span><span class="p">);</span>
+
+<span class="nx">expect</span><span class="p">(</span><span class="nx">element</span><span class="p">.</span><span class="nx">setAttributes</span><span class="p">).</span><span class="nx">toHaveBeenCalled</span><span class="p">();</span>
+</code></pre></div></div>
+
+<p>Since jest’s <code class="language-plaintext highlighter-rouge">Mock</code> is not assignable to <code class="language-plaintext highlighter-rouge">(name: string, value: string) =&gt; void</code>, the type that <code class="language-plaintext highlighter-rouge">HTMLElement['setAttribute']</code> has, there is a type error. What can we do about it?</p>
+
+<p>The first option is to use <code class="language-plaintext highlighter-rouge">jest.spyOn</code> to set up a mock:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">element</span> <span class="o">=</span> <span class="p">{</span> <span class="na">setAttributes</span><span class="p">:</span> <span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">value</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{}</span> <span class="p">}</span> <span class="k">as</span> <span class="nx">HTMLElement</span><span class="p">;</span>
+
+<span class="nx">setElementAttributes</span><span class="p">(</span><span class="nx">element</span><span class="p">);</span>
+
+<span class="kd">const</span> <span class="nx">spy</span> <span class="o">=</span> <span class="nx">jest</span><span class="p">.</span><span class="nx">spyOn</span><span class="p">(</span><span class="nx">element</span><span class="p">,</span> <span class="dl">"</span><span class="s2">setAttributes</span><span class="dl">"</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>The second is to narrow the method’s type since <code class="language-plaintext highlighter-rouge">Mock</code> is convertible to any function:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">element</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="na">setAttributes</span><span class="p">:</span> <span class="nx">jest</span><span class="p">.</span><span class="nx">fn</span><span class="p">()</span> <span class="k">as</span> <span class="nx">HTMLElement</span><span class="p">[</span><span class="dl">"</span><span class="s2">setAttributes</span><span class="dl">"</span><span class="p">],</span>
+<span class="p">}</span> <span class="k">as</span> <span class="nx">HTMLElement</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>Both options won’t require any unsafe typecasts and we aren’t going to lose any type data.</p>
+
+<p>Of course, the examples here are simplified, and real-life cases could be much more tricky. Here’s a little hack that could make resolving typecasting issues a bit easier.</p>
+
+<p>Because TS will always show an error hint related to the first conversion attempt, we can force it to show the more informative one, just by reverting an expression:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">type</span> <span class="nx">FooBar</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="na">foo</span><span class="p">:</span> <span class="dl">"</span><span class="s2">foo</span><span class="dl">"</span><span class="p">;</span>
+  <span class="nl">bar</span><span class="p">:</span> <span class="dl">"</span><span class="s2">bar</span><span class="dl">"</span><span class="p">;</span>
+  <span class="nl">fooBar</span><span class="p">:</span> <span class="p">(</span><span class="na">value</span><span class="p">:</span> <span class="kr">string</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kr">number</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="kd">const</span> <span class="nx">a</span> <span class="o">=</span> <span class="p">{</span> <span class="na">fooBar</span><span class="p">:</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="mi">0</span> <span class="p">}</span> <span class="k">as</span> <span class="nx">FooBar</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>The error hint doesn’t make much sense:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Conversion of type '{ fooBar: () =&gt; number; }' to type 'FooBar'
+may be a mistake because neither type sufficiently overlaps with the other.
+If this was intentional, convert the expression to 'unknown' first.
+
+Type '{ fooBar: () =&gt; number; }' is missing the following properties from type 'FooBar': foo, bar
+</code></pre></div></div>
+
+<p>Let’s revert to the expression:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// The const isn't initialized, but let's ignore it</span>
+<span class="kd">const</span> <span class="nx">b</span><span class="p">:</span> <span class="nx">FooBar</span><span class="p">;</span>
+
+<span class="c1">// TS error</span>
+<span class="kd">const</span> <span class="nx">c</span> <span class="o">=</span> <span class="nx">b</span> <span class="k">as</span> <span class="p">{</span> <span class="na">fooBar</span><span class="p">:</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="kr">number</span> <span class="p">};</span>
+</code></pre></div></div>
+
+<p>Now, we’ll check the error hint:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Conversion of type 'FooBar' to type '{ fooBar: () =&gt; number; }'
+may be a mistake because neither type sufficiently overlaps with the other.
+If this was intentional, convert the expression to 'unknown' first.
+
+Types of property 'fooBar' are incompatible.
+Type '(value: string) =&gt; number' is not comparable to type '() =&gt; number'.
+Target signature provides too few arguments. Expected 1 or more, but got 0.
+</code></pre></div></div>
+
+<p>And this one is pointing to the issue we have - incompatible <code class="language-plaintext highlighter-rouge">fooBar</code> methods.</p>
+
+<p>Understanding the logic behind the TypeScript typecasting mechanism can help us avoid unsafe casting in our code and keep it more reliable.</p>
+
+<p>Use casts for good and good luck!</p>
+
+
+
+
+  <small>tags: <em>typescript</em> - <em>type-casting</em></small>
+
+
+      </section>
+    </div>
+  </body>
+</html>
