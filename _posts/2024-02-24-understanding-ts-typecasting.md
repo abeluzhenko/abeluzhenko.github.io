@@ -6,6 +6,8 @@ categories: typescript
 tags: typescript type-casting
 ---
 
+![type-casting](/assets/images/understanding-ts-typecasting.webp)
+
 > Disclaimer: typecasts lead to losing type information, I'd strongly recommend avoiding them, whenever possible.
 
 There are cases when typecasting is necessary or even preferable.
@@ -227,4 +229,3 @@ And this one is pointing to the issue we have - incompatible `fooBar` methods.
 Understanding the logic behind the TypeScript typecasting mechanism can help us avoid unsafe casting in our code and keep it more reliable.
 
 Use casts for good and good luck!
-
